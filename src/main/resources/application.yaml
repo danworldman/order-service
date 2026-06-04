@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: order-service
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+  profiles:
+    active: local
+
+server:
+  port: 8082
+
+user-service:
+  url: ${USER_SERVICE_URL:http://localhost:8080}

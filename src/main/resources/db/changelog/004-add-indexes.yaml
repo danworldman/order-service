@@ -1,0 +1,41 @@
+databaseChangeLog:
+  - changeSet:
+      id: 4
+      author: danworldman
+      changes:
+        - createIndex:
+            indexName: idx_orders_user_id
+            tableName: orders
+            columns:
+              - column:
+                  name: user_id
+        - createIndex:
+            indexName: idx_orders_status
+            tableName: orders
+            columns:
+              - column:
+                  name: status
+        - createIndex:
+            indexName: idx_orders_created_at
+            tableName: orders
+            columns:
+              - column:
+                  name: created_at
+        - createIndex:
+            indexName: idx_order_items_order_id
+            tableName: order_items
+            columns:
+              - column:
+                  name: order_id
+        - createIndex:
+            indexName: idx_order_items_item_id
+            tableName: order_items
+            columns:
+              - column:
+                  name: item_id
+        - createIndex:
+            indexName: idx_items_name
+            tableName: items
+            columns:
+              - column:
+                  name: name
