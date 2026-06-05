@@ -1,6 +1,7 @@
 package com.innowise.orderservice.dao.specification;
 
 import com.innowise.orderservice.model.entity.Order;
+import com.innowise.orderservice.model.entity.OrderStatus;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDateTime;
@@ -15,8 +16,7 @@ public class OrderSpecification {
             if (status == null || status.isBlank()) {
                 return criteriaBuilder.conjunction();
             }
-
-            return criteriaBuilder.equal(root.get("status"), status);
+            return criteriaBuilder.equal(root.get("status"), OrderStatus.valueOf(status.toUpperCase().trim()));
         };
     }
 

@@ -5,7 +5,7 @@ import com.innowise.orderservice.dao.OrderDAO;
 import com.innowise.orderservice.dao.specification.OrderSpecification;
 import com.innowise.orderservice.exception.OrderAlreadyDeletedException;
 import com.innowise.orderservice.exception.OrderNotFoundException;
-import com.innowise.orderservice.exception.UserNotFoundException;
+import com.innowise.orderservice.mapper.ItemMapper;
 import com.innowise.orderservice.mapper.OrderMapper;
 import com.innowise.orderservice.model.dto.item.ItemResponse;
 import com.innowise.orderservice.model.dto.order.OrderCreateRequest;
@@ -15,6 +15,7 @@ import com.innowise.orderservice.model.dto.user.UserResponse;
 import com.innowise.orderservice.model.entity.Item;
 import com.innowise.orderservice.model.entity.Order;
 import com.innowise.orderservice.model.entity.OrderItem;
+import com.innowise.orderservice.model.entity.OrderStatus;
 import com.innowise.orderservice.service.ItemService;
 import com.innowise.orderservice.service.OrderService;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,7 @@ import java.util.stream.Collectors;
 public class OrderServiceImpl implements OrderService {
 
     private final OrderDAO orderDAO;
+    private final ItemMapper itemMapper;
     private final OrderMapper orderMapper;
     private final UserServiceClient userServiceClient;
     private final ItemService itemService;
@@ -45,21 +47,19 @@ public class OrderServiceImpl implements OrderService {
 
         Order order = new Order();
         order.setUserId(user.id());
-        order.setStatus("CREATED");
+        order.setStatus(OrderStatus.CREATED);
         order.setTotalPrice(BigDecimal.ZERO);
         order.setDeleted(false);
 
         List<OrderItem> orderItems = request.items().stream()
                 .map(itemReq -> {
                     ItemResponse itemDto = itemService.getItemById(itemReq.itemId());
-                    Item item = new Item();
-                    item.setId(itemDto.id());
-                    item.setName(itemDto.name());
-                    item.setPrice(itemDto.price());
+                    Item item = itemMapper.toEntity(itemDto);
 
                     OrderItem orderItem = orderMapper.toOrderItemEntity(itemReq);
                     orderItem.setItem(item);
                     orderItem.setOrder(order);
+
                     return orderItem;
                 })
                 .collect(Collectors.toList());

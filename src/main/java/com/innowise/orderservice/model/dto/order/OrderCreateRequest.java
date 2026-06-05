@@ -12,5 +12,5 @@ public record OrderCreateRequest(
 
         @NotEmpty(message = "Order must contain at least one item")
         @Valid
-        List<OrderItemCreateRequest> items
+        List<@NotNull(message = "Order item cannot be null") OrderItemCreateRequest> items
 ) {}

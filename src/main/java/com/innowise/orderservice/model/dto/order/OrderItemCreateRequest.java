@@ -7,7 +7,7 @@ public record OrderItemCreateRequest(
         @NotNull(message = "Item ID is required")
         Long itemId,
 
-        @NotNull(message = "Quantity is required and cannot be blank")
+        @NotNull(message = "Quantity is required")
         @Positive(message = "Quantity must be greater than zero")
         Long quantity
 ) {}
