@@ -9,6 +9,11 @@ spring:
     change-log: classpath:db/changelog/db.changelog-master.yaml
   profiles:
     active: local
+  mvc:
+    throw-exception-if-no-handler-found: true
+  web:
+    resources:
+      add-mappings: false
 
 server:
   port: 8082

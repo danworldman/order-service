@@ -28,7 +28,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -43,7 +42,8 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse createOrder(OrderCreateRequest request) {
-        UserResponse user = userServiceClient.getUserById(request.userId());
+        UserResponse userById = userServiceClient.getUserById(request.userId());
+        UserResponse user = userServiceClient.getUserByEmail(userById.email());
 
         Order order = new Order();
         order.setUserId(user.id());
@@ -62,7 +62,7 @@ public class OrderServiceImpl implements OrderService {
 
                     return orderItem;
                 })
-                .collect(Collectors.toList());
+                .toList();
 
         order.setOrderItems(orderItems);
 
@@ -97,13 +97,13 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<OrderResponse> getOrdersWithPaginationAndFilters(LocalDateTime from, LocalDateTime to, String status,
+    public Page<OrderResponse> getOrdersWithPaginationAndFilters(LocalDateTime from, LocalDateTime to, List<String> statuses,
                                                                  Pageable pageable) {
         Specification<Order> specification = Specification
                 .where(OrderSpecification.notDeleted())
                 .and(OrderSpecification.createdAfter(from))
                 .and(OrderSpecification.createdBefore(to))
-                .and(OrderSpecification.hasStatus(status));
+                .and(OrderSpecification.hasStatuses(statuses));
 
         Page<Order> orders = orderDAO.findAll(specification, pageable);
 
@@ -118,7 +118,11 @@ public class OrderServiceImpl implements OrderService {
     public Page<OrderResponse> getOrdersByUserId(Long userId, Pageable pageable) {
         validateId(userId);
 
-        Page<Order> orders = orderDAO.findByUserId(userId, pageable);
+        Specification<Order> specification = Specification
+                .where(OrderSpecification.notDeleted())
+                .and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("userId"), userId));
+
+        Page<Order> orders = orderDAO.findAll(specification, pageable);
         UserResponse user = userServiceClient.getUserById(userId);
 
         return orders.map(order -> orderMapper.toOrderDto(order, user));

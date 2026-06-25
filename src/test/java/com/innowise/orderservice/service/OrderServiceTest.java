@@ -20,6 +20,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -70,6 +75,7 @@ class OrderServiceTest extends ServiceTestData {
         );
 
         Mockito.when(userServiceClient.getUserById(DEFAULT_USER_ID)).thenReturn(defaultUserResponse);
+        Mockito.when(userServiceClient.getUserByEmail(DEFAULT_USER_EMAIL)).thenReturn(defaultUserResponse);
         Mockito.when(itemService.getItemById(DEFAULT_ITEM_ID)).thenReturn(sampleItemResponse);
         Mockito.when(itemMapper.toEntity(sampleItemResponse)).thenReturn(sampleItem);
         Mockito.when(orderMapper.toOrderItemEntity(Mockito.any(OrderItemCreateRequest.class))).thenReturn(orderItem);
@@ -85,11 +91,12 @@ class OrderServiceTest extends ServiceTestData {
 
     @Test
     void createOrder_shouldThrowUserNotFoundException_whenUserNotFound() {
-        OrderCreateRequest request = new OrderCreateRequest(NON_EXISTENT_ID,
+        OrderCreateRequest request = new OrderCreateRequest(DEFAULT_USER_ID,
                 List.of(new OrderItemCreateRequest(DEFAULT_ITEM_ID, QUANTITY_1))
         );
 
-        Mockito.when(userServiceClient.getUserById(NON_EXISTENT_ID))
+        Mockito.when(userServiceClient.getUserById(DEFAULT_USER_ID)).thenReturn(defaultUserResponse);
+        Mockito.when(userServiceClient.getUserByEmail(DEFAULT_USER_EMAIL))
                 .thenThrow(new UserNotFoundException("User not found"));
 
         assertThatThrownBy(() -> orderService.createOrder(request))
@@ -170,5 +177,77 @@ class OrderServiceTest extends ServiceTestData {
 
         assertThat(result.status()).isEqualTo(STATUS_SHIPPED);
         Mockito.verify(orderMapper).updateOrderEntityStatus(order, updateRequest);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void getOrdersWithPaginationAndFilters_shouldReturnPaginatedOrders() {
+        LocalDateTime from = LocalDateTime.now().minusDays(1);
+        LocalDateTime to = LocalDateTime.now();
+        List<String> statuses = List.of(STATUS_CREATED);
+        Pageable pageable = PageRequest.of(0, 10);
+
+        Order order = new Order();
+        order.setId(ORDER_ID_1);
+        order.setUserId(DEFAULT_USER_ID);
+
+        OrderResponse response = new OrderResponse(ORDER_ID_1, defaultUserResponse, STATUS_CREATED,
+                BigDecimal.ZERO, List.of(), null, null
+        );
+
+        Page<Order> orderPage = new PageImpl<>(List.of(order));
+
+        Mockito.when(orderDAO.findAll(Mockito.any(Specification.class), Mockito.eq(pageable))).thenReturn(orderPage);
+        Mockito.when(userServiceClient.getUserById(DEFAULT_USER_ID)).thenReturn(defaultUserResponse);
+        Mockito.when(orderMapper.toOrderDto(order, defaultUserResponse)).thenReturn(response);
+
+        Page<OrderResponse> result = orderService.getOrdersWithPaginationAndFilters(from, to, statuses, pageable);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().getFirst().id()).isEqualTo(ORDER_ID_1);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void getOrdersByUserId_shouldReturnFilteredAndPaginatedOrders_whenValidUserId() {
+        Pageable pageable = PageRequest.of(0, 10);
+
+        Order order = new Order();
+        order.setId(ORDER_ID_1);
+        order.setUserId(DEFAULT_USER_ID);
+        order.setDeleted(false);
+
+        OrderResponse response = new OrderResponse(ORDER_ID_1, defaultUserResponse, STATUS_CREATED,
+                BigDecimal.ZERO, List.of(), null, null
+        );
+
+        Page<Order> orderPage = new PageImpl<>(List.of(order));
+
+        Mockito.when(orderDAO.findAll(Mockito.any(Specification.class), Mockito.eq(pageable))).thenReturn(orderPage);
+        Mockito.when(userServiceClient.getUserById(DEFAULT_USER_ID)).thenReturn(defaultUserResponse);
+        Mockito.when(orderMapper.toOrderDto(order, defaultUserResponse)).thenReturn(response);
+
+        Page<OrderResponse> result = orderService.getOrdersByUserId(DEFAULT_USER_ID, pageable);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().getFirst().user().id()).isEqualTo(DEFAULT_USER_ID);
+    }
+
+    @Test
+    void getOrdersByUserId_shouldThrowIllegalArgumentException_whenUserIdIsZero() {
+        Pageable pageable = PageRequest.of(0, 10);
+
+        assertThatThrownBy(() -> orderService.getOrdersByUserId(INVALID_ID_ZERO, pageable))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void getOrdersByUserId_shouldThrowIllegalArgumentException_whenUserIdIsNegative() {
+        Pageable pageable = PageRequest.of(0, 10);
+
+        assertThatThrownBy(() -> orderService.getOrdersByUserId(INVALID_ID_NEGATIVE, pageable))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

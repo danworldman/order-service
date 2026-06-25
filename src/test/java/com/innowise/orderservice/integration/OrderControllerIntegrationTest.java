@@ -22,6 +22,7 @@ import java.util.List;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -29,6 +30,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class OrderControllerIntegrationTest extends BaseIntegrationTest {
+
+    private HttpHeaders createAuthHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set(HttpHeaders.AUTHORIZATION, "Bearer test-token");
+        return headers;
+    }
 
     @Test
     void createOrder_shouldReturn201Created_whenUserExists() {
@@ -42,9 +50,7 @@ public class OrderControllerIntegrationTest extends BaseIntegrationTest {
                 new OrderItemCreateRequest(item2.getId(), 1L)
         ));
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<OrderCreateRequest> entity = new HttpEntity<>(request, headers);
+        HttpEntity<OrderCreateRequest> entity = new HttpEntity<>(request, createAuthHeaders());
 
         ResponseEntity<OrderResponse> response = restTemplate.postForEntity(
                 baseUrl() + "/api/orders", entity, OrderResponse.class
@@ -83,9 +89,7 @@ public class OrderControllerIntegrationTest extends BaseIntegrationTest {
         OrderCreateRequest request = new OrderCreateRequest(NON_EXISTENT_ID,
                 List.of(new OrderItemCreateRequest(1L, 2L)));
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<OrderCreateRequest> entity = new HttpEntity<>(request, headers);
+        HttpEntity<OrderCreateRequest> entity = new HttpEntity<>(request, createAuthHeaders());
 
         HttpClientErrorException exception = assertThrows(HttpClientErrorException.class, () -> {
             restTemplate.postForEntity(baseUrl() + "/api/orders", entity, OrderResponse.class);
@@ -99,9 +103,7 @@ public class OrderControllerIntegrationTest extends BaseIntegrationTest {
     void createOrder_shouldReturn400BadRequest_whenOrderItemsListIsEmpty() {
         OrderCreateRequest request = new OrderCreateRequest(DEFAULT_USER_ID, List.of());
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<OrderCreateRequest> entity = new HttpEntity<>(request, headers);
+        HttpEntity<OrderCreateRequest> entity = new HttpEntity<>(request, createAuthHeaders());
 
         HttpClientErrorException exception = assertThrows(HttpClientErrorException.class, () -> {
             restTemplate.postForEntity(baseUrl() + "/api/orders", entity, OrderResponse.class);
@@ -118,12 +120,14 @@ public class OrderControllerIntegrationTest extends BaseIntegrationTest {
         OrderCreateRequest createRequest = new OrderCreateRequest(DEFAULT_USER_ID,
                 List.of(new OrderItemCreateRequest(item.getId(), 1L)));
 
+        HttpEntity<OrderCreateRequest> createEntity = new HttpEntity<>(createRequest, createAuthHeaders());
         OrderResponse createdOrder = restTemplate.postForObject(
-                baseUrl() + "/api/orders", createRequest, OrderResponse.class
+                baseUrl() + "/api/orders", createEntity, OrderResponse.class
         );
 
-        ResponseEntity<OrderResponse> getResponse = restTemplate.getForEntity(
-                baseUrl() + "/api/orders/" + createdOrder.id(), OrderResponse.class
+        HttpEntity<Void> getEntity = new HttpEntity<>(createAuthHeaders());
+        ResponseEntity<OrderResponse> getResponse = restTemplate.exchange(
+                baseUrl() + "/api/orders/" + createdOrder.id(), HttpMethod.GET, getEntity, OrderResponse.class
         );
 
         assertEquals(HttpStatus.OK, getResponse.getStatusCode());
@@ -139,8 +143,9 @@ public class OrderControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void getOrderById_shouldReturn404_whenOrderDoesNotExist() {
+        HttpEntity<Void> entity = new HttpEntity<>(createAuthHeaders());
         HttpClientErrorException exception = assertThrows(HttpClientErrorException.class, () -> {
-            restTemplate.getForEntity(baseUrl() + "/api/orders/" + NON_EXISTENT_ID, OrderResponse.class);
+            restTemplate.exchange(baseUrl() + "/api/orders/" + NON_EXISTENT_ID, HttpMethod.GET, entity, OrderResponse.class);
         });
 
         assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
@@ -155,14 +160,16 @@ public class OrderControllerIntegrationTest extends BaseIntegrationTest {
         OrderCreateRequest createRequest = new OrderCreateRequest(DEFAULT_USER_ID,
                 List.of(new OrderItemCreateRequest(item.getId(), 1L)));
 
+        HttpEntity<OrderCreateRequest> createEntity = new HttpEntity<>(createRequest, createAuthHeaders());
         OrderResponse created = restTemplate.postForObject(
-                baseUrl() + "/api/orders", createRequest, OrderResponse.class
+                baseUrl() + "/api/orders", createEntity, OrderResponse.class
         );
 
-        restTemplate.delete(baseUrl() + "/api/orders/" + created.id());
+        HttpEntity<Void> deleteEntity = new HttpEntity<>(createAuthHeaders());
+        restTemplate.exchange(baseUrl() + "/api/orders/" + created.id(), HttpMethod.DELETE, deleteEntity, Void.class);
 
         HttpClientErrorException exception = assertThrows(HttpClientErrorException.class, () -> {
-            restTemplate.getForEntity(baseUrl() + "/api/orders/" + created.id(), OrderResponse.class);
+            restTemplate.exchange(baseUrl() + "/api/orders/" + created.id(), HttpMethod.GET, deleteEntity, OrderResponse.class);
         });
 
         assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
@@ -177,17 +184,19 @@ public class OrderControllerIntegrationTest extends BaseIntegrationTest {
         OrderCreateRequest createRequest = new OrderCreateRequest(DEFAULT_USER_ID,
                 List.of(new OrderItemCreateRequest(item.getId(), 1L)));
 
+        HttpEntity<OrderCreateRequest> createEntity = new HttpEntity<>(createRequest, createAuthHeaders());
         OrderResponse created = restTemplate.postForObject(
-                baseUrl() + "/api/orders", createRequest, OrderResponse.class
+                baseUrl() + "/api/orders", createEntity, OrderResponse.class
         );
 
         OrderUpdateRequest updateRequest = new OrderUpdateRequest("CONFIRMED");
-        HttpEntity<OrderUpdateRequest> entity = new HttpEntity<>(updateRequest);
+        HttpEntity<OrderUpdateRequest> entity = new HttpEntity<>(updateRequest, createAuthHeaders());
         restTemplate.exchange(baseUrl() + "/api/orders/" + created.id(),
                 HttpMethod.PUT, entity, OrderResponse.class);
 
-        String url = baseUrl() + "/api/orders?status=CONFIRMED&page=0&size=10";
-        ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+        String url = baseUrl() + "/api/orders?statuses=CONFIRMED&page=0&size=10";
+        HttpEntity<Void> getEntity = new HttpEntity<>(createAuthHeaders());
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, getEntity, String.class);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertTrue(response.getBody().contains("CONFIRMED"));
@@ -196,10 +205,19 @@ public class OrderControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void getOrdersByUserId_shouldReturnOrdersForSpecificUser() throws Exception {
         Long alternativeUserId = 20L;
+        String alternativeUserEmail = "alt@email.com";
         mockUserService();
 
-        UserResponse alternativeUser = new UserResponse(alternativeUserId, "Alternative", "User", "alt@email.com");
+        UserResponse alternativeUser = new UserResponse(alternativeUserId, "Alternative", "User", alternativeUserEmail);
+
         wireMockServer.stubFor(get(urlEqualTo("/api/users/" + alternativeUserId))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+                        .withBody(toJson(alternativeUser))));
+
+        wireMockServer.stubFor(get(urlPathEqualTo("/api/users/by-email"))
+                .withQueryParam("email", com.github.tomakehurst.wiremock.client.WireMock.equalTo(alternativeUserEmail))
                 .willReturn(aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
@@ -207,45 +225,37 @@ public class OrderControllerIntegrationTest extends BaseIntegrationTest {
 
         Item item = createItem();
 
-        OrderCreateRequest request1 = new OrderCreateRequest(DEFAULT_USER_ID,
-                List.of(new OrderItemCreateRequest(item.getId(), 1L)));
-        restTemplate.postForObject(baseUrl() + "/api/orders", request1, OrderResponse.class);
+        OrderCreateRequest request1 = new OrderCreateRequest(DEFAULT_USER_ID, List.of(new OrderItemCreateRequest(item.getId(), 1L)));
+        HttpEntity<OrderCreateRequest> entity1 = new HttpEntity<>(request1, createAuthHeaders());
+        restTemplate.postForObject(baseUrl() + "/api/orders", entity1, OrderResponse.class);
 
-        OrderCreateRequest request2 = new OrderCreateRequest(alternativeUserId,
-                List.of(new OrderItemCreateRequest(item.getId(), 1L)));
-        restTemplate.postForObject(baseUrl() + "/api/orders", request2, OrderResponse.class);
+        OrderCreateRequest request2 = new OrderCreateRequest(alternativeUserId, List.of(new OrderItemCreateRequest(item.getId(), 1L)));
+        HttpEntity<OrderCreateRequest> entity2 = new HttpEntity<>(request2, createAuthHeaders());
+        restTemplate.postForObject(baseUrl() + "/api/orders", entity2, OrderResponse.class);
 
         String url = baseUrl() + "/api/orders/user/" + DEFAULT_USER_ID + "?page=0&size=10";
-        ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+        HttpEntity<Void> getEntity = new HttpEntity<>(createAuthHeaders());
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, getEntity, String.class);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertTrue(response.getBody().contains("\"id\":" + DEFAULT_USER_ID));
-        assertFalse(response.getBody().contains("\"id\":" + alternativeUserId));
+        String jsonResponse = response.getBody();
+        assertNotNull(jsonResponse);
+        assertTrue(jsonResponse.contains("\"user\":{\"id\":" + DEFAULT_USER_ID));
+        assertFalse(jsonResponse.contains("\"user\":{\"id\":" + alternativeUserId));
     }
 
     @Test
     void updateOrder_shouldChangeStatus_whenOrderExists() {
         mockUserService();
         Item item = createItem();
-        OrderCreateRequest createRequest = new OrderCreateRequest(
-                DEFAULT_USER_ID,
-                List.of(new OrderItemCreateRequest(item.getId(), 1L))
-        );
-        OrderResponse created = restTemplate.postForObject(
-                baseUrl() + "/api/orders",
-                createRequest,
-                OrderResponse.class
-        );
+
+        OrderCreateRequest createRequest = new OrderCreateRequest(DEFAULT_USER_ID, List.of(new OrderItemCreateRequest(item.getId(), 1L)));
+        HttpEntity createEntity = new HttpEntity<>(createRequest, createAuthHeaders());
+        OrderResponse created = restTemplate.postForObject(baseUrl() + "/api/orders", createEntity, OrderResponse.class);
 
         OrderUpdateRequest updateRequest = new OrderUpdateRequest("SHIPPED");
-        HttpEntity<OrderUpdateRequest> entity = new HttpEntity<>(updateRequest);
-
-        ResponseEntity<OrderResponse> updateResponse = restTemplate.exchange(
-                baseUrl() + "/api/orders/" + created.id(),
-                HttpMethod.PUT,
-                entity,
-                OrderResponse.class
-        );
+        HttpEntity entity = new HttpEntity<>(updateRequest, createAuthHeaders());
+        ResponseEntity<OrderResponse> updateResponse = restTemplate.exchange(baseUrl() + "/api/orders/" + created.id(), HttpMethod.PUT, entity, OrderResponse.class);
 
         assertEquals(HttpStatus.OK, updateResponse.getStatusCode());
         assertEquals("SHIPPED", updateResponse.getBody().status());
@@ -254,17 +264,10 @@ public class OrderControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void updateOrder_shouldReturn404_whenOrderNotFound() {
         OrderUpdateRequest updateRequest = new OrderUpdateRequest("SHIPPED");
-        HttpEntity<OrderUpdateRequest> entity = new HttpEntity<>(updateRequest);
+        HttpEntity entity = new HttpEntity<>(updateRequest, createAuthHeaders());
 
-        HttpClientErrorException exception = assertThrows(
-                HttpClientErrorException.class,
-                () -> restTemplate.exchange(
-                        baseUrl() + "/api/orders/" + NON_EXISTENT_ID,
-                        HttpMethod.PUT,
-                        entity,
-                        OrderResponse.class
-                )
-        );
+        HttpClientErrorException exception = assertThrows(HttpClientErrorException.class, () ->
+                restTemplate.exchange(baseUrl() + "/api/orders/" + NON_EXISTENT_ID, HttpMethod.PUT, entity, OrderResponse.class));
 
         assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
     }
@@ -273,33 +276,25 @@ public class OrderControllerIntegrationTest extends BaseIntegrationTest {
     void deleteOrder_shouldSoftDelete_andThenNotReturn() {
         mockUserService();
         Item item = createItem();
-        OrderCreateRequest createRequest = new OrderCreateRequest(
-                DEFAULT_USER_ID,
-                List.of(new OrderItemCreateRequest(item.getId(), 1L))
-        );
-        OrderResponse created = restTemplate.postForObject(
-                baseUrl() + "/api/orders",
-                createRequest,
-                OrderResponse.class
-        );
 
-        restTemplate.delete(baseUrl() + "/api/orders/" + created.id());
+        OrderCreateRequest createRequest = new OrderCreateRequest(DEFAULT_USER_ID, List.of(new OrderItemCreateRequest(item.getId(), 1L)));
+        HttpEntity createEntity = new HttpEntity<>(createRequest, createAuthHeaders());
+        OrderResponse created = restTemplate.postForObject(baseUrl() + "/api/orders", createEntity, OrderResponse.class);
 
-        HttpClientErrorException exception = assertThrows(
-                HttpClientErrorException.class,
-                () -> restTemplate.getForEntity(
-                        baseUrl() + "/api/orders/" + created.id(),
-                        OrderResponse.class
-                )
-        );
+        HttpEntity testEntity = new HttpEntity<>(createAuthHeaders());
+        restTemplate.exchange(baseUrl() + "/api/orders/" + created.id(), HttpMethod.DELETE, testEntity, Void.class);
+
+        HttpClientErrorException exception = assertThrows(HttpClientErrorException.class, () ->
+                restTemplate.exchange(baseUrl() + "/api/orders/" + created.id(), HttpMethod.GET, testEntity, OrderResponse.class));
 
         assertTrue(exception.getStatusCode().is4xxClientError());
     }
 
     private void stubUserNotFound(Long userId) {
-        wireMockServer.stubFor(
-                get(urlEqualTo("/api/users/" + userId))
-                        .willReturn(aResponse().withStatus(404))
-        );
+        wireMockServer.stubFor(get(urlEqualTo("/api/users/" + userId))
+                .willReturn(aResponse().withStatus(404)));
+
+        wireMockServer.stubFor(get(urlEqualTo("/api/users/by-email?email=" + DEFAULT_USER_EMAIL))
+                .willReturn(aResponse().withStatus(404)));
     }
 }

@@ -5,18 +5,29 @@ import com.innowise.orderservice.model.entity.OrderStatus;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class OrderSpecification {
 
     private OrderSpecification() {
     }
 
-    public static Specification<Order> hasStatus(String status) {
+    public static Specification<Order> hasStatuses(List<String> statuses) {
         return (root, query, criteriaBuilder) -> {
-            if (status == null || status.isBlank()) {
+            if (statuses == null || statuses.isEmpty()) {
                 return criteriaBuilder.conjunction();
             }
-            return criteriaBuilder.equal(root.get("status"), OrderStatus.valueOf(status.toUpperCase().trim()));
+
+            List<OrderStatus> orderStatuses = statuses.stream()
+                    .filter(status -> status != null && !status.isBlank())
+                    .map(status -> OrderStatus.valueOf(status.toUpperCase().trim()))
+                    .toList();
+
+            if (orderStatuses.isEmpty()) {
+                return criteriaBuilder.conjunction();
+            }
+
+            return root.get("status").in(orderStatuses);
         };
     }
 

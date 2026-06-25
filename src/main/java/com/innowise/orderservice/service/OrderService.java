@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public interface OrderService {
 
@@ -14,7 +15,7 @@ public interface OrderService {
 
     OrderResponse getOrderById(Long id);
 
-    Page<OrderResponse> getOrdersWithPaginationAndFilters(LocalDateTime from, LocalDateTime to, String status, Pageable pageable);
+    Page<OrderResponse> getOrdersWithPaginationAndFilters(LocalDateTime from, LocalDateTime to, List<String> statuses, Pageable pageable);
 
     Page<OrderResponse> getOrdersByUserId(Long userId, Pageable pageable);
 

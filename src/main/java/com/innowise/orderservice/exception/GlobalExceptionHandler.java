@@ -7,8 +7,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -60,9 +62,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ProblemDetail> handleTypeMismatch(MethodArgumentTypeMismatchException exception) {
+        String detail = String.format("Parameter '%s' should be of type '%s'", exception.getName(), exception.getRequiredType().getSimpleName());
+        return response(HttpStatus.BAD_REQUEST, detail);
+    }
+
     @ExceptionHandler(NoHandlerFoundException.class)
     public ResponseEntity<ProblemDetail> handleNotFound(NoHandlerFoundException exception) {
         return response(HttpStatus.NOT_FOUND, "Endpoint not found");
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ProblemDetail> handleResourceNotFound(NoResourceFoundException exception) {
+        return response(HttpStatus.NOT_FOUND, "Resource not found: " + exception.getResourcePath());
     }
 
     @ExceptionHandler(ConstraintViolationException.class)

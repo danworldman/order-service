@@ -7,12 +7,15 @@ import com.innowise.orderservice.dao.ItemDAO;
 import com.innowise.orderservice.dao.OrderDAO;
 import com.innowise.orderservice.model.dto.user.UserResponse;
 import com.innowise.orderservice.model.entity.Item;
+import jakarta.servlet.http.HttpServletRequest;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.test.annotation.DirtiesContext;
@@ -20,6 +23,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -75,10 +80,15 @@ public abstract class BaseIntegrationTest {
         restTemplate = createRestTemplate();
         wireMockServer.resetRequests();
         wireMockServer.resetToDefaultMappings();
+
+        HttpServletRequest mockRequest = Mockito.mock(HttpServletRequest.class);
+        Mockito.when(mockRequest.getHeader(HttpHeaders.AUTHORIZATION)).thenReturn("Bearer test-token");
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(mockRequest));
     }
 
     @AfterEach
     void tearDownBase() {
+        RequestContextHolder.resetRequestAttributes();
         orderRepository.deleteAll();
         itemRepository.deleteAll();
     }
@@ -108,7 +118,15 @@ public abstract class BaseIntegrationTest {
 
     protected void mockUserService() {
         UserResponse user = new UserResponse(DEFAULT_USER_ID, DEFAULT_USER_NAME, DEFAULT_USER_SURNAME, DEFAULT_USER_EMAIL);
+
         wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo("/api/users/" + DEFAULT_USER_ID))
+                .willReturn(WireMock.aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+                        .withBody(toJson(user))));
+
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/api/users/by-email"))
+                .withQueryParam("email", WireMock.equalTo(DEFAULT_USER_EMAIL))
                 .willReturn(WireMock.aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)

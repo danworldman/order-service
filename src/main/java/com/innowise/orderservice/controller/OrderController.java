@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -42,8 +43,8 @@ public class OrderController {
     @GetMapping
     public ResponseEntity<Page<OrderResponse>> getOrdersWithPaginationAndFilters(
             @RequestParam(required = false) LocalDateTime from, @RequestParam(required = false) LocalDateTime to,
-            @RequestParam(required = false) String status, Pageable pageable) {
-        return ResponseEntity.ok(orderService.getOrdersWithPaginationAndFilters(from, to, status, pageable));
+            @RequestParam(required = false) List<String> statuses, Pageable pageable) {
+        return ResponseEntity.ok(orderService.getOrdersWithPaginationAndFilters(from, to, statuses, pageable));
     }
 
     @GetMapping("/user/{userId}")
