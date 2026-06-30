@@ -34,33 +34,10 @@ public class UserServiceClient {
         }
     }
 
-    @CircuitBreaker(name = "userServiceEmail", fallbackMethod = "getUserByEmailFallback")
-    public UserResponse getUserByEmail(String email) {
-        try {
-            return webClient.get()
-                    .uri(userServiceUrl + "/api/users/by-email?email={email}", email)
-                    .retrieve()
-                    .bodyToMono(UserResponse.class)
-                    .block();
-        } catch (WebClientResponseException exception) {
-            if (exception.getStatusCode().value() == 404) {
-                throw new UserNotFoundException("User not found with email: " + email);
-            }
-            throw exception;
-        }
-    }
-
     private UserResponse getUserByIdFallback(Long userId, Throwable throwable) {
         if (throwable instanceof UserNotFoundException) {
             throw (UserNotFoundException) throwable;
         }
         return new UserResponse(userId, "Unknown", "Unknown", "unknown@service.com");
-    }
-
-    private UserResponse getUserByEmailFallback(String email, Throwable throwable) {
-        if (throwable instanceof UserNotFoundException) {
-            throw (UserNotFoundException) throwable;
-        }
-        return new UserResponse(0L, "Unknown", "Unknown", email);
     }
 }

@@ -1,14 +1,15 @@
 package com.innowise.orderservice.config;
 
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.reactive.function.client.ClientRequest;
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+import jakarta.servlet.http.HttpServletRequest;
+import reactor.core.publisher.Mono;
 
 @Configuration
 public class WebClientConfig {
@@ -21,7 +22,7 @@ public class WebClientConfig {
     }
 
     private ExchangeFilterFunction bearerTokenFilter() {
-        return (request, next) -> {
+        return (request, next) -> Mono.defer(() -> {
             ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
             if (attributes != null) {
                 HttpServletRequest servletRequest = attributes.getRequest();
@@ -34,6 +35,6 @@ public class WebClientConfig {
                 }
             }
             return next.exchange(request);
-        };
+        });
     }
 }

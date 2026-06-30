@@ -5,10 +5,10 @@ COPY gradle gradle
 COPY build.gradle settings.gradle .
 RUN chmod +x gradlew && ./gradlew dependencies --no-daemon
 COPY src ./src
-RUN ./gradlew bootJar --no-daemon
+RUN ./gradlew bootJar -x test --no-daemon
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-COPY build/libs/*.jar app.jar
+COPY --from=builder /app/build/libs/*.jar app.jar
 ENV SPRING_PROFILES_ACTIVE=docker
 ENTRYPOINT ["java", "-jar", "app.jar"]

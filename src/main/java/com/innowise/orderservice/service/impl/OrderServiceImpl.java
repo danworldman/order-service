@@ -24,7 +24,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -42,8 +41,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse createOrder(OrderCreateRequest request) {
-        UserResponse userById = userServiceClient.getUserById(request.userId());
-        UserResponse user = userServiceClient.getUserByEmail(userById.email());
+        UserResponse user = userServiceClient.getUserById(request.userId());
 
         Order order = new Order();
         order.setUserId(user.id());
@@ -51,15 +49,14 @@ public class OrderServiceImpl implements OrderService {
         order.setTotalPrice(BigDecimal.ZERO);
         order.setDeleted(false);
 
-        List<OrderItem> orderItems = request.items().stream()
+        List<OrderItem> orderItems = request.items()
+                .stream()
                 .map(itemReq -> {
                     ItemResponse itemDto = itemService.getItemById(itemReq.itemId());
                     Item item = itemMapper.toEntity(itemDto);
-
                     OrderItem orderItem = orderMapper.toOrderItemEntity(itemReq);
                     orderItem.setItem(item);
                     orderItem.setOrder(order);
-
                     return orderItem;
                 })
                 .toList();
@@ -167,7 +164,6 @@ public class OrderServiceImpl implements OrderService {
         if (id == null) {
             throw new IllegalArgumentException("Id cannot be null");
         }
-
         if (id <= 0) {
             throw new IllegalArgumentException("Id must be positive");
         }
