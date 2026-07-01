@@ -38,6 +38,6 @@ public class UserServiceClient {
         if (throwable instanceof UserNotFoundException) {
             throw (UserNotFoundException) throwable;
         }
-        return new UserResponse(userId, "Unknown", "Unknown", "unknown@service.com");
+        throw new IllegalStateException("User service is unavailable and circuit breaker is open for ID: " + userId, throwable);
     }
 }
