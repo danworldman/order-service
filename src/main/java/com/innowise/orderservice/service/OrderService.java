@@ -11,15 +11,17 @@ import java.util.List;
 
 public interface OrderService {
 
-    OrderResponse createOrder(OrderCreateRequest request);
+    OrderResponse createOrder(OrderCreateRequest request, String authHeader);
 
-    OrderResponse getOrderById(Long id);
+    OrderResponse getOrderById(Long id, String authHeader);
 
-    Page<OrderResponse> getOrdersWithPaginationAndFilters(LocalDateTime from, LocalDateTime to, List<String> statuses, Pageable pageable);
+    Page<OrderResponse> getOrdersWithPaginationAndFilters(LocalDateTime from, LocalDateTime to,
+                                                          List<String> statuses, Pageable pageable,
+                                                          String authHeader);
 
-    Page<OrderResponse> getOrdersByUserId(Long userId, Pageable pageable);
+    Page<OrderResponse> getOrdersByUserId(Long userId, Pageable pageable, String authHeader);
 
-    OrderResponse updateOrderById(Long id, OrderUpdateRequest request);
+    OrderResponse updateOrderById(Long id, OrderUpdateRequest request, String authHeader);
 
     void deleteOrderById(Long id);
 }

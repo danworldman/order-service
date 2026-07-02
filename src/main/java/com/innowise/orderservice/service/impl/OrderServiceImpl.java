@@ -24,6 +24,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -40,8 +41,8 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
-    public OrderResponse createOrder(OrderCreateRequest request) {
-        UserResponse user = userServiceClient.getUserById(request.userId());
+    public OrderResponse createOrder(OrderCreateRequest request, String authHeader) {
+        UserResponse user = userServiceClient.getUserById(request.userId(), authHeader);
 
         Order order = new Order();
         order.setUserId(user.id());
@@ -78,7 +79,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(readOnly = true)
-    public OrderResponse getOrderById(Long id) {
+    public OrderResponse getOrderById(Long id, String authHeader) {
         validateId(id);
 
         Order order = orderDAO.findById(id)
@@ -88,14 +89,15 @@ public class OrderServiceImpl implements OrderService {
             throw new OrderAlreadyDeletedException("Order already deleted: " + id);
         }
 
-        UserResponse user = userServiceClient.getUserById(order.getUserId());
+        UserResponse user = userServiceClient.getUserById(order.getUserId(), authHeader);
         return orderMapper.toOrderDto(order, user);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<OrderResponse> getOrdersWithPaginationAndFilters(LocalDateTime from, LocalDateTime to, List<String> statuses,
-                                                                 Pageable pageable) {
+    public Page<OrderResponse> getOrdersWithPaginationAndFilters(LocalDateTime from, LocalDateTime to,
+                                                                 List<String> statuses, Pageable pageable,
+                                                                 String authHeader) {
         Specification<Order> specification = Specification
                 .where(OrderSpecification.notDeleted())
                 .and(OrderSpecification.createdAfter(from))
@@ -105,14 +107,14 @@ public class OrderServiceImpl implements OrderService {
         Page<Order> orders = orderDAO.findAll(specification, pageable);
 
         return orders.map(order -> {
-            UserResponse user = userServiceClient.getUserById(order.getUserId());
+            UserResponse user = userServiceClient.getUserById(order.getUserId(), authHeader);
             return orderMapper.toOrderDto(order, user);
         });
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<OrderResponse> getOrdersByUserId(Long userId, Pageable pageable) {
+    public Page<OrderResponse> getOrdersByUserId(Long userId, Pageable pageable, String authHeader) {
         validateId(userId);
 
         Specification<Order> specification = Specification
@@ -120,14 +122,14 @@ public class OrderServiceImpl implements OrderService {
                 .and((root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("userId"), userId));
 
         Page<Order> orders = orderDAO.findAll(specification, pageable);
-        UserResponse user = userServiceClient.getUserById(userId);
+        UserResponse user = userServiceClient.getUserById(userId, authHeader);
 
         return orders.map(order -> orderMapper.toOrderDto(order, user));
     }
 
     @Override
     @Transactional
-    public OrderResponse updateOrderById(Long id, OrderUpdateRequest request) {
+    public OrderResponse updateOrderById(Long id, OrderUpdateRequest request, String authHeader) {
         validateId(id);
 
         Order order = orderDAO.findById(id)
@@ -140,7 +142,7 @@ public class OrderServiceImpl implements OrderService {
         orderMapper.updateOrderEntityStatus(order, request);
 
         Order updated = orderDAO.save(order);
-        UserResponse user = userServiceClient.getUserById(order.getUserId());
+        UserResponse user = userServiceClient.getUserById(order.getUserId(), authHeader);
 
         return orderMapper.toOrderDto(updated, user);
     }
