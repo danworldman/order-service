@@ -35,7 +35,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 
 @ExtendWith(MockitoExtension.class)
@@ -78,13 +77,13 @@ class OrderServiceTest extends ServiceTestData {
                 LocalDateTime.of(2026, 5, 19, 3, 1)
         );
 
-        Mockito.lenient().when(userServiceClient.getUserById(anyLong(), anyString()))
+        Mockito.when(userServiceClient.getUserById(anyLong(), any()))
                 .thenReturn(defaultUserResponse);
         Mockito.when(itemService.getItemById(DEFAULT_ITEM_ID)).thenReturn(sampleItemResponse);
         Mockito.when(itemMapper.toEntity(sampleItemResponse)).thenReturn(sampleItem);
         Mockito.when(orderMapper.toOrderItemEntity(any(OrderItemCreateRequest.class))).thenReturn(orderItem);
         Mockito.when(orderDAO.save(any(Order.class))).thenReturn(order);
-        Mockito.lenient().when(orderMapper.toOrderDto(any(Order.class), eq(defaultUserResponse))).thenReturn(response);
+        Mockito.when(orderMapper.toOrderDto(any(Order.class), eq(defaultUserResponse))).thenReturn(response);
 
         OrderResponse result = orderService.createOrder(request, null);
 
@@ -99,7 +98,7 @@ class OrderServiceTest extends ServiceTestData {
                 List.of(new OrderItemCreateRequest(DEFAULT_ITEM_ID, QUANTITY_1))
         );
 
-        Mockito.lenient().when(userServiceClient.getUserById(eq(NON_EXISTENT_ID), anyString()))
+        Mockito.when(userServiceClient.getUserById(eq(NON_EXISTENT_ID), any()))
                 .thenThrow(new UserNotFoundException("User not found with id: " + NON_EXISTENT_ID));
 
         assertThatThrownBy(() -> orderService.createOrder(request, null))
@@ -120,9 +119,9 @@ class OrderServiceTest extends ServiceTestData {
         );
 
         Mockito.when(orderDAO.findById(ORDER_ID_1)).thenReturn(Optional.of(order));
-        Mockito.lenient().when(userServiceClient.getUserById(anyLong(), anyString()))
+        Mockito.when(userServiceClient.getUserById(anyLong(), any()))
                 .thenReturn(defaultUserResponse);
-        Mockito.lenient().when(orderMapper.toOrderDto(any(Order.class), eq(defaultUserResponse))).thenReturn(response);
+        Mockito.when(orderMapper.toOrderDto(any(Order.class), eq(defaultUserResponse))).thenReturn(response);
 
         OrderResponse result = orderService.getOrderById(ORDER_ID_1, null);
 
@@ -173,10 +172,10 @@ class OrderServiceTest extends ServiceTestData {
         );
 
         Mockito.when(orderDAO.findById(ORDER_ID_1)).thenReturn(Optional.of(order));
-        Mockito.lenient().when(userServiceClient.getUserById(anyLong(), anyString()))
+        Mockito.when(userServiceClient.getUserById(anyLong(), any()))
                 .thenReturn(defaultUserResponse);
         Mockito.when(orderDAO.save(order)).thenReturn(order);
-        Mockito.lenient().when(orderMapper.toOrderDto(any(Order.class), eq(defaultUserResponse))).thenReturn(response);
+        Mockito.when(orderMapper.toOrderDto(any(Order.class), eq(defaultUserResponse))).thenReturn(response);
 
         OrderResponse result = orderService.updateOrderById(ORDER_ID_1, updateRequest, null);
 
@@ -185,7 +184,6 @@ class OrderServiceTest extends ServiceTestData {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void getOrdersWithPaginationAndFilters_shouldReturnPaginatedOrders() {
         LocalDateTime from = LocalDateTime.now().minusDays(1);
         LocalDateTime to = LocalDateTime.now();
@@ -203,9 +201,9 @@ class OrderServiceTest extends ServiceTestData {
         Page<Order> orderPage = new PageImpl<>(List.of(order));
 
         Mockito.when(orderDAO.findAll(any(Specification.class), eq(pageable))).thenReturn(orderPage);
-        Mockito.lenient().when(userServiceClient.getUserById(anyLong(), anyString()))
+        Mockito.when(userServiceClient.getUserById(anyLong(), any()))
                 .thenReturn(defaultUserResponse);
-        Mockito.lenient().when(orderMapper.toOrderDto(any(Order.class), eq(defaultUserResponse))).thenReturn(response);
+        Mockito.when(orderMapper.toOrderDto(any(Order.class), eq(defaultUserResponse))).thenReturn(response);
 
         Page<OrderResponse> result = orderService.getOrdersWithPaginationAndFilters(from, to, statuses, pageable, null);
 
@@ -215,7 +213,6 @@ class OrderServiceTest extends ServiceTestData {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void getOrdersByUserId_shouldReturnFilteredAndPaginatedOrders_whenValidUserId() {
         Pageable pageable = PageRequest.of(0, 10);
 
@@ -231,9 +228,9 @@ class OrderServiceTest extends ServiceTestData {
         Page<Order> orderPage = new PageImpl<>(List.of(order));
 
         Mockito.when(orderDAO.findAll(any(Specification.class), eq(pageable))).thenReturn(orderPage);
-        Mockito.lenient().when(userServiceClient.getUserById(anyLong(), anyString()))
+        Mockito.when(userServiceClient.getUserById(anyLong(), any()))
                 .thenReturn(defaultUserResponse);
-        Mockito.lenient().when(orderMapper.toOrderDto(any(Order.class), eq(defaultUserResponse))).thenReturn(response);
+        Mockito.when(orderMapper.toOrderDto(any(Order.class), eq(defaultUserResponse))).thenReturn(response);
 
         Page<OrderResponse> result = orderService.getOrdersByUserId(DEFAULT_USER_ID, pageable, null);
 
