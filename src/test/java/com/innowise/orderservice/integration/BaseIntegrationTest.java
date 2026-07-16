@@ -28,6 +28,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.kafka.ConfluentKafkaContainer;
 
 import java.math.BigDecimal;
 
@@ -48,6 +49,10 @@ public abstract class BaseIntegrationTest {
             .withDatabaseName("order_db")
             .withUsername("postgres")
             .withPassword("postgres");
+
+    @Container
+    protected static final ConfluentKafkaContainer KAFKA =
+            new ConfluentKafkaContainer("confluentinc/cp-kafka:7.4.0");
 
     @Autowired
     protected ItemDAO itemRepository;
@@ -71,6 +76,8 @@ public abstract class BaseIntegrationTest {
         registry.add("spring.liquibase.url", POSTGRES::getJdbcUrl);
         registry.add("spring.liquibase.user", POSTGRES::getUsername);
         registry.add("spring.liquibase.password", POSTGRES::getPassword);
+
+        registry.add("spring.kafka.bootstrap-servers", KAFKA::getBootstrapServers);
 
         registry.add("user-service.url", () -> "http://localhost:" + wireMockServer.port());
     }

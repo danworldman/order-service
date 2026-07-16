@@ -12,8 +12,11 @@ services:
       - DB_PORT=5432
       - DB_NAME=order_db
       - USER_SERVICE_URL=${USER_SERVICE_URL:-http://host.docker.internal:8080}
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     depends_on:
       db:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
 
   db:
@@ -32,6 +35,33 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: order-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: order-kafka
+    ports:
+      - "9093:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    healthcheck:
+      test: [ "CMD", "bash", "-c", "</dev/tcp/127.0.0.1/9092" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
 
 volumes:
   db-data:

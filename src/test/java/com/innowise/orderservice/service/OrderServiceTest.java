@@ -5,6 +5,7 @@ import com.innowise.orderservice.dao.OrderDAO;
 import com.innowise.orderservice.exception.OrderAlreadyDeletedException;
 import com.innowise.orderservice.exception.OrderNotFoundException;
 import com.innowise.orderservice.exception.UserNotFoundException;
+import com.innowise.orderservice.kafka.OrderEventProducer;
 import com.innowise.orderservice.mapper.ItemMapper;
 import com.innowise.orderservice.mapper.OrderMapper;
 import com.innowise.orderservice.model.dto.order.OrderCreateRequest;
@@ -54,6 +55,9 @@ class OrderServiceTest extends ServiceTestData {
 
     @Mock
     private ItemMapper itemMapper;
+
+    @Mock
+    private OrderEventProducer orderEventProducer;
 
     @InjectMocks
     private OrderServiceImpl orderService;

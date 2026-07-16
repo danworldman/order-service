@@ -5,6 +5,7 @@ import com.innowise.orderservice.dao.OrderDAO;
 import com.innowise.orderservice.dao.specification.OrderSpecification;
 import com.innowise.orderservice.exception.OrderAlreadyDeletedException;
 import com.innowise.orderservice.exception.OrderNotFoundException;
+import com.innowise.orderservice.kafka.OrderEventProducer;
 import com.innowise.orderservice.mapper.ItemMapper;
 import com.innowise.orderservice.mapper.OrderMapper;
 import com.innowise.orderservice.model.dto.item.ItemResponse;
@@ -16,6 +17,7 @@ import com.innowise.orderservice.model.entity.Item;
 import com.innowise.orderservice.model.entity.Order;
 import com.innowise.orderservice.model.entity.OrderItem;
 import com.innowise.orderservice.model.entity.OrderStatus;
+import com.innowise.orderservice.model.event.OrderCreatedEvent;
 import com.innowise.orderservice.service.ItemService;
 import com.innowise.orderservice.service.OrderService;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +40,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderMapper orderMapper;
     private final UserServiceClient userServiceClient;
     private final ItemService itemService;
+    private final OrderEventProducer orderEventProducer;
 
     @Override
     @Transactional
@@ -74,6 +77,11 @@ public class OrderServiceImpl implements OrderService {
         order.setTotalPrice(total);
 
         Order saved = orderDAO.save(order);
+
+        orderEventProducer.sendOrderCreatedEvent(
+                new OrderCreatedEvent(saved.getId(), saved.getUserId(), saved.getTotalPrice())
+        );
+
         return orderMapper.toOrderDto(saved, user);
     }
 
