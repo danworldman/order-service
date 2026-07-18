@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: order-service
+  profiles:
+    active: local
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+  mvc:
+    throw-exception-if-no-handler-found: true
+  web:
+    resources:
+      add-mappings: false
+
+server:
+  port: 8082
+
+user-service:
+  url: ${USER_SERVICE_URL:http://user-service:8080}
